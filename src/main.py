@@ -1,6 +1,8 @@
 import pygame
 import random
 from math import pi
+from ros_engine.ros_engine import ROSEngine
+from ros_engine.nodes import RobotNode
 from components.motion import Pose, UnicycleModel
 from physics_engine.physics_engine import PygamePhysicsEngine
 from physics_engine.actors import PERobotActor, PEGridActor, PEDistanceSensorActor
@@ -30,9 +32,14 @@ def create_sensor(grid):
     sensor = PygameDistanceSensor(grid)
     return sensor
 
+def create_robot_node(robot):
+    robot_node = RobotNode(robot)
+    return robot_node
+
 if __name__ == "__main__":
     ve = PygameVisualEngine()
     pe = PygamePhysicsEngine(0.01)
+    re = ROSEngine()
 
     grid = create_grid()
     ve.add_actor(VEGridActor(grid))
@@ -47,12 +54,15 @@ if __name__ == "__main__":
     ve.add_actor(VEDistanceSensorActor(sensor))
     pe.add_actor(PEDistanceSensorActor(sensor))
 
-    running = ve.initialize()
+    robot_node = create_robot_node(robot)
+    re.add_node(robot_node)
+    re.start_engine()
 
+    running = ve.initialize()
+   
     while running:
         running = ve.render()
         pe.step()
 
-        robot.set_angular_velocity(5)
-
     ve.terminate()
+    re.stop_engine()

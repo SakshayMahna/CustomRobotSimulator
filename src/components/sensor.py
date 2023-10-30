@@ -4,7 +4,7 @@ class DistanceSensor:
     def __init__(self, environment):
         self._environment = environment
         self._pose = Pose()
-        self._value = 0
+        self._value = [0.0]
 
     def update_pose(self, x, y, theta):
         self._pose.x = x

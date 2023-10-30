@@ -35,9 +35,11 @@ class Robot:
             pose = self.get_pose()
             self._sensor.update_pose(pose.x, pose.y, pose.theta)
 
-    def sense(self):
-        pose = self.get_pose()
-        d = self._sensor.sense(pose)
-        return d
+    def get_sensor_reading(self):
+        sensor = self._sensor
+        return sensor.get_sensor_reading()
+
+    def accept(self, visitor):
+        visitor.visit(self)
 
     

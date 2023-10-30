@@ -58,7 +58,7 @@ class PygameDistanceSensor(DistanceSensor):
         end_pos = self._end_pos
                 
         distance = self._calculate_distance_between_pos(start_pos, end_pos)
-        self._value = distance
+        self._value = [distance]
 
     def _calculate_distance_between_pos(self, pos1, pos2):
         x0 = pos1.x; y0 = pos1.y
