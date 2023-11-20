@@ -2,7 +2,7 @@ import pygame
 import random
 from math import pi
 from ros_engine.ros_engine import ROSEngine
-from ros_engine.nodes import RobotNode, TFNode
+from ros_engine.nodes import RobotNode, TFNode, OdometryNode
 from components.motion import Pose, UnicycleModel
 from physics_engine.physics_engine import PygamePhysicsEngine
 from physics_engine.actors import PERobotActor, PEGridActor, PEDistanceSensorActor
@@ -40,6 +40,10 @@ def create_tf_node(robot, sensor):
     tf_node = TFNode(robot, sensor)
     return tf_node
 
+def create_odom_node(robot):
+    odom_node = OdometryNode(robot)
+    return odom_node
+
 if __name__ == "__main__":
     ve = PygameVisualEngine()
     pe = PygamePhysicsEngine(0.01)
@@ -60,8 +64,10 @@ if __name__ == "__main__":
 
     robot_node = create_robot_node(robot)
     tf_node = create_tf_node(robot, sensor)
+    odom_node = create_odom_node(robot)
     re.add_node(robot_node)
     re.add_node(tf_node)
+    re.add_node(odom_node)
     re.start_engine()
 
     running = ve.initialize()

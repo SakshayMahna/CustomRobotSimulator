@@ -15,6 +15,14 @@ class Robot:
         pose = self._motion_model.get_pose()
         return pose
 
+    def get_velocity(self):
+        v = self._robot_state.v
+        return v
+
+    def get_angular_velocity(self):
+        w = self._robot_state.w
+        return w
+
     def set_velocity(self, v):
         self._robot_state.v = v
 
