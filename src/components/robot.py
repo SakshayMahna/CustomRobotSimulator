@@ -23,6 +23,7 @@ class Robot:
 
     def add_sensor(self, sensor):
         self._sensor = sensor
+        self._update_sensor_pose()
 
     def move(self, dt):
         v = self._robot_state.v
