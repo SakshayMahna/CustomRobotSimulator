@@ -8,6 +8,9 @@ from tf2_ros import TransformBroadcaster
 from tf2_ros.static_transform_broadcaster import StaticTransformBroadcaster
 import math
 
+LINEAR_SCALE = 150.0
+ANGULAR_SCALE = 1.0
+
 class RobotNode(Node):
     def __init__(self, robot):
         super().__init__('robot_node')
@@ -20,22 +23,37 @@ class RobotNode(Node):
                                self._vel_callback, 10)
 
     def _initialize_publishers(self):
-        self._scan_publisher = self.create_publisher(LaserScan, 'scan', 10)
+        self._scan_publisher = self.create_publisher(LaserScan, 'scan', 20)
         timer_period = 0.5
         self.create_timer(timer_period, self._scan_callback)
 
     def _vel_callback(self, msg):
         robot = self._robot
-        velocity = msg.linear.x
+        velocity = msg.linear.x * LINEAR_SCALE
         robot.set_velocity(velocity)
 
-        angular_velocity = msg.angular.z
+        angular_velocity = msg.angular.z * ANGULAR_SCALE
         robot.set_angular_velocity(angular_velocity)
 
     def _scan_callback(self):
         robot = self._robot
         msg = LaserScan()
-        msg.ranges = robot.get_sensor_reading()
+        
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = 'base_laser'
+
+        laser_values = robot.get_sensor_reading()
+        offset_values = robot.get_sensor_offsets()
+        scaled_values = [l / LINEAR_SCALE for l in laser_values]
+
+        msg.angle_min = offset_values[0]
+        msg.angle_max = offset_values[-1]
+        msg.angle_increment = (offset_values[-1] - offset_values[0]) / (len(offset_values) - 1)
+        msg.time_increment = 0.01
+        msg.scan_time = 0.5
+        msg.range_min = 0.0
+        msg.range_max = 20.0
+        msg.ranges = scaled_values
         self._scan_publisher.publish(msg)
 
 class TFNode(Node):
@@ -50,26 +68,47 @@ class TFNode(Node):
         self._broadcaster = StaticTransformBroadcaster(self)
 
     def _make_transform(self):
-        t = TransformStamped()
-
-        t.header.stamp = self.get_clock().now().to_msg()
-        t.header.frame_id = 'base_link'
-        t.child_frame_id = 'base_laser'
-
         robot_pose = self._robot.get_pose()
         sensor_pose = self._sensor.get_pose()
 
-        t.transform.translation.x = float(sensor_pose.x - robot_pose.x)
-        t.transform.translation.y = float(sensor_pose.y - robot_pose.y)
-        t.transform.translation.z = 0.0
+        dx = (sensor_pose.x - robot_pose.x) / LINEAR_SCALE
+        dy = (sensor_pose.y - robot_pose.y) / LINEAR_SCALE
+        dtheta = (sensor_pose.theta - robot_pose.theta) / ANGULAR_SCALE
 
-        quat = self._quaternion_from_euler(0, 0, sensor_pose.theta - robot_pose.theta)
-        t.transform.rotation.x = quat[0]
-        t.transform.rotation.y = quat[1]
-        t.transform.rotation.z = quat[2]
-        t.transform.rotation.w = quat[3]
+        header = self.get_clock().now().to_msg()
 
-        self._broadcaster.sendTransform(t)
+        t1 = TransformStamped()
+
+        t1.header.stamp = header
+        t1.header.frame_id = 'base_link'
+        t1.child_frame_id = 'base_laser'
+
+        t1.transform.translation.x = dx
+        t1.transform.translation.y = dy
+        t1.transform.translation.z = 0.0
+
+        quat = self._quaternion_from_euler(0, 0, dtheta)
+        t1.transform.rotation.x = quat[0]
+        t1.transform.rotation.y = quat[1]
+        t1.transform.rotation.z = quat[2]
+        t1.transform.rotation.w = quat[3]
+
+        t2 = TransformStamped()
+
+        t2.header.stamp = header
+        t2.header.frame_id = 'base_footprint'
+        t2.child_frame_id = 'base_link'
+
+        t2.transform.translation.x = 0.0
+        t2.transform.translation.y = 0.0
+        t2.transform.translation.z = 0.0
+
+        t2.transform.rotation.x = 0.0
+        t2.transform.rotation.y = 0.0
+        t2.transform.rotation.z = 0.0
+        t2.transform.rotation.w = 1.0
+
+        self._broadcaster.sendTransform([t1, t2])
 
     def _quaternion_from_euler(self, ai, aj, ak):
         ai /= 2.0
@@ -108,23 +147,24 @@ class OdometryNode(Node):
         self.create_timer(timer_period, self._odom_callback)
 
     def _odom_callback(self):
-        self._publish_transform()
-        self._publish_odom()
+        header = self.get_clock().now().to_msg()
+        self._publish_transform(header)
+        self._publish_odom(header)
 
-    def _publish_transform(self):
+    def _publish_transform(self, header):
+        robot_pose = self._robot.get_pose()
+        
         t = TransformStamped()
 
-        t.header.stamp = self.get_clock().now().to_msg()
+        t.header.stamp = header
         t.header.frame_id = 'odom'
-        t.child_frame_id = 'base_link'
+        t.child_frame_id = 'base_footprint'
 
-        robot_pose = self._robot.get_pose()
-
-        t.transform.translation.x = float(robot_pose.x)
-        t.transform.translation.y = float(robot_pose.y)
+        t.transform.translation.x = robot_pose.x / LINEAR_SCALE
+        t.transform.translation.y = robot_pose.y / LINEAR_SCALE
         t.transform.translation.z = 0.0
 
-        quat = self._quaternion_from_euler(0, 0, robot_pose.theta)
+        quat = self._quaternion_from_euler(0, 0, robot_pose.theta / ANGULAR_SCALE)
         t.transform.rotation.x = quat[0]
         t.transform.rotation.y = quat[1]
         t.transform.rotation.z = quat[2]
@@ -132,30 +172,30 @@ class OdometryNode(Node):
 
         self._broadcaster.sendTransform(t)
 
-    def _publish_odom(self):
+    def _publish_odom(self, header):
         o = Odometry()
         
-        o.header.stamp = self.get_clock().now().to_msg()
+        o.header.stamp = header
         o.header.frame_id = 'odom'
 
         robot_pose = self._robot.get_pose()
         robot_v = self._robot.get_velocity()
         robot_w = self._robot.get_angular_velocity()
 
-        o.pose.pose.position.x = float(robot_pose.x)
-        o.pose.pose.position.y = float(robot_pose.y)
+        o.pose.pose.position.x = robot_pose.x / LINEAR_SCALE
+        o.pose.pose.position.y = robot_pose.y / LINEAR_SCALE
         o.pose.pose.position.z = 0.0
 
-        quat = self._quaternion_from_euler(0, 0, robot_pose.theta)
+        quat = self._quaternion_from_euler(0, 0, robot_pose.theta / ANGULAR_SCALE)
         o.pose.pose.orientation.x = quat[0]
         o.pose.pose.orientation.y = quat[1]
         o.pose.pose.orientation.z = quat[2]
         o.pose.pose.orientation.w = quat[3]
 
         o.child_frame_id = 'base_link'
-        o.twist.twist.linear.x = float(robot_v)
+        o.twist.twist.linear.x = robot_v / LINEAR_SCALE
         o.twist.twist.linear.y = 0.0
-        o.twist.twist.angular.z = float(robot_w)
+        o.twist.twist.angular.z = robot_w / ANGULAR_SCALE
 
         self._odom_publisher.publish(o)
 

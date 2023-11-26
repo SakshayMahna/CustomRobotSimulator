@@ -1,7 +1,7 @@
 import pygame
 from math import sqrt
 from components.robot import Robot
-from components.sensor import DistanceSensor
+from components.sensor import DistanceSensor, LaserSensor
 from components.obstacles import RectangleObstacle, Grid
 
 class PygameRobot(Robot):
@@ -74,6 +74,44 @@ class PygameDistanceSensor(DistanceSensor):
     def update_visual_object(self, sx, sy, ex, ey):
         self._start_pos = pygame.Vector2(sx, sy)
         self._end_pos = pygame.Vector2(ex, ey)
+
+class PygameLaserSensor(LaserSensor):
+    def __init__(self, grid, sensor_offsets):
+        super(PygameLaserSensor, self).__init__(grid, sensor_offsets)
+        self._initialize_visual_object()
+        self._initialize_collision_object()
+    
+    def _initialize_visual_object(self):
+        pose = self.get_pose()
+        sensor_offsets = self.get_sensor_offsets()
+        self._start_pos = pygame.Vector2(pose.x, pose.y)
+        self._end_poses = [pygame.Vector2(pose.x, pose.y) for _ in range(len(sensor_offsets))]
+
+    def _initialize_collision_object(self):
+        pass
+
+    def sense(self):
+        start_pos = self._start_pos
+        end_poses = self._end_poses
+               
+        for eidx, end_pos in enumerate(end_poses):    
+            distance = self._calculate_distance_between_pos(start_pos, end_pos)
+            self._value[eidx] = distance
+
+    def _calculate_distance_between_pos(self, pos1, pos2):
+        x0 = pos1.x; y0 = pos1.y
+        x1 = pos2.x; y1 = pos2.y
+        return sqrt((x0-x1)**2 + (y0-y1)**2)
+
+    def get_collision_object(self):
+        return (self._start_pos, self._end_poses)
+
+    def get_visual_object(self):
+        return (self._start_pos, self._end_poses)
+
+    def update_visual_object(self, idx, sx, sy, ex, ey):
+        self._start_pos = pygame.Vector2(sx, sy)
+        self._end_poses[idx] = pygame.Vector2(ex, ey)
 
 
 class PygameRectangleObstacle(RectangleObstacle):

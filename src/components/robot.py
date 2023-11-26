@@ -48,6 +48,10 @@ class Robot:
         sensor = self._sensor
         return sensor.get_sensor_reading()
 
+    def get_sensor_offsets(self):
+        sensor = self._sensor
+        return sensor.get_sensor_offsets()
+
     def accept(self, visitor):
         visitor.visit(self)
 

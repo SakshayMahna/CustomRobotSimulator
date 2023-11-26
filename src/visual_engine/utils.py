@@ -1,6 +1,7 @@
 from math import pi, sin, cos, radians, degrees
 
 def determine_line_box_clip(x, y, theta, b_width, b_height):
+    theta = theta % (2*pi)
     a = sin(theta); b = cos(theta)
     c = (y * b - x * a)
     width = b_width; height = b_height
@@ -42,5 +43,7 @@ def determine_line_box_clip(x, y, theta, b_width, b_height):
             if x1 > width:
                 x1 = width
                 y1 = (x1 * a + c) / b
+        else:
+            print(theta)
     
     return (x1, y1)

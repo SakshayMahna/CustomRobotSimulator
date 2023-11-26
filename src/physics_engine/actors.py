@@ -28,6 +28,11 @@ class PEDistanceSensorActor(PEActor):
         sensor = self._component
         sensor.sense()
 
+class PELaserSensorActor(PEActor):
+    def step(self, dt):
+        sensor = self._component
+        sensor.sense()
+
 class PEGridActor(PEActor):
     def step(self, dt):
         pass

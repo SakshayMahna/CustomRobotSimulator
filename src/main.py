@@ -5,31 +5,40 @@ from ros_engine.ros_engine import ROSEngine
 from ros_engine.nodes import RobotNode, TFNode, OdometryNode
 from components.motion import Pose, UnicycleModel
 from physics_engine.physics_engine import PygamePhysicsEngine
-from physics_engine.actors import PERobotActor, PEGridActor, PEDistanceSensorActor
+from physics_engine.actors import (PERobotActor, PEGridActor, 
+                                   PEDistanceSensorActor, PELaserSensorActor)
 from visual_engine.visual_engine import PygameVisualEngine
-from visual_engine.actors import VERobotActor, VEGridActor, VEDistanceSensorActor
-from components.pygame_components import (PygameRobot, PygameDistanceSensor, 
+from visual_engine.actors import (VERobotActor, VEGridActor, 
+                                  VEDistanceSensorActor, VELaserSensorActor)
+from components.pygame_components import (PygameRobot, 
+                                          PygameDistanceSensor, PygameLaserSensor, 
                                           PygameRectangleObstacle, PygameGrid)
 
 def create_grid():
     grid = PygameGrid()
 
-    obstacle = PygameRectangleObstacle(1000, 200, 300, 400)
-    grid.add_obstacle(obstacle)
-
-    obstacle = PygameRectangleObstacle(0, 270, 500, 100)
+    obstacle = PygameRectangleObstacle(440, 160, 300, 300)
     grid.add_obstacle(obstacle)
 
     return grid
 
 def create_robot():
-    motion_model = UnicycleModel(Pose(540, 360, -pi/6))
+    motion_model = UnicycleModel(Pose(340, 60, -pi/6))
     robot = PygameRobot(motion_model)
 
     return robot
 
 def create_sensor(grid):
     sensor = PygameDistanceSensor(grid)
+    return sensor
+
+def create_laser_sensor(grid):
+    resolution = 0.005
+    start_angle = -0.3; end_angle = 0.3
+    angle_range = end_angle - start_angle
+    angle_length = int(angle_range / resolution)
+    sensor_offsets = [start_angle + i * 0.01 for i in range(angle_length + 1)]
+    sensor = PygameLaserSensor(grid, sensor_offsets)
     return sensor
 
 def create_robot_node(robot):
@@ -57,17 +66,17 @@ if __name__ == "__main__":
     ve.add_actor(VERobotActor(robot))
     pe.add_actor(PERobotActor(robot))
 
-    sensor = create_sensor(grid)
+    sensor = create_laser_sensor(grid)
     robot.add_sensor(sensor)
-    ve.add_actor(VEDistanceSensorActor(sensor))
-    pe.add_actor(PEDistanceSensorActor(sensor))
+    ve.add_actor(VELaserSensorActor(sensor))
+    pe.add_actor(PELaserSensorActor(sensor))
 
     robot_node = create_robot_node(robot)
     tf_node = create_tf_node(robot, sensor)
     odom_node = create_odom_node(robot)
-    re.add_node(robot_node)
     re.add_node(tf_node)
     re.add_node(odom_node)
+    re.add_node(robot_node)
     re.start_engine()
 
     running = ve.initialize()
