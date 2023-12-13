@@ -1,0 +1,11 @@
+%% Use Python Virtual Environment
+% https://in.mathworks.com/support/search.html/answers/1750425-python-virtual-environments-with-python-interface.html?fq%5B%5D=asset_type_name:answer&page=1
+pythonPath = "C:\\Personal\\Robot\\Mobile Robots\\LocalizationExperiment\\CustomRobotSimulator\\rsim\\Scripts\\python.exe";
+pyenv('Version', pythonPath, 'ExecutionMode', 'OutOfProcess');
+
+[robot, sensor] = pyrunfile('main_thread.py', ["robot", "sensor"]);
+robotNode = RobotNode(robot);
+
+p = parpool(2);
+navNode = parfeval(p, @exampleHelperRobotWallFollowingNode, 0);
+slamNode = parfeval(p, @exampleHelperSla)

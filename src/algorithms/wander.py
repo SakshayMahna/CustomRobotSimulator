@@ -15,7 +15,7 @@ class Wander(AlgorithmNode):
 
     def algorithm(self):
         sensor_reading = self.get_sensor_reading()
-        scan = abs(sensor_reading[0])
+        scan = abs(min(sensor_reading))
 
         if self._state == MOVE_STATE:
             if scan < 100:

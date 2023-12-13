@@ -56,7 +56,6 @@ def create_odom_node(robot):
 if __name__ == "__main__":
     ve = PygameVisualEngine()
     pe = PygamePhysicsEngine(0.01)
-    re = ROSEngine()
 
     grid = create_grid()
     ve.add_actor(VEGridActor(grid))
@@ -71,19 +70,12 @@ if __name__ == "__main__":
     ve.add_actor(VELaserSensorActor(sensor))
     pe.add_actor(PELaserSensorActor(sensor))
 
-    robot_node = create_robot_node(robot)
-    tf_node = create_tf_node(robot, sensor)
-    odom_node = create_odom_node(robot)
-    re.add_node(tf_node)
-    re.add_node(odom_node)
-    re.add_node(robot_node)
-    re.start_engine()
-
     running = ve.initialize()
-   
     while running:
         running = ve.render()
         pe.step()
 
     ve.terminate()
     re.stop_engine()
+
+    
